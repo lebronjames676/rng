@@ -1,7 +1,7 @@
 // Heroes panel: equipped slots, backpack cards and the hero index.
 import { HEROES, RARITIES, parseKey, displayName, stackKey, masteryStars, MASTERY_STEPS } from '../data/heroes.js';
 import { heroStats, equipHero, equipBest, equippedCount, normalizeEquipped } from '../game/logic.js';
-import { heroSprite } from './portraits.js';
+import { heroSprite } from './sprites.js';
 import { $, el, iconSpan, escapeHtml, rarityStyle } from './dom.js';
 import { icon } from './icons.js';
 import { fmt, fmtOdds } from '../util.js';
@@ -62,7 +62,7 @@ export class HeroesPanel {
       } else {
         const { hero } = parseKey(key);
         const rs = rarityStyle(RARITIES[hero.rarity]);
-        s = el('button', 'slot', `<img src="${heroSprite(key)}" alt="${escapeHtml(displayName(key))}"><span class="slot-x">${icon('close')}</span>`);
+        s = el('button', 'slot', `<img src="${heroSprite(key, { size: 128 })}" alt="${escapeHtml(displayName(key))}"><span class="slot-x">${icon('close')}</span>`);
         s.style.borderColor = rs.border;
         s.title = `${displayName(key)}: tap to unequip`;
         s.addEventListener('click', () => {

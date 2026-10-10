@@ -2,7 +2,7 @@
 import { RARITIES, parseKey, displayName, HERO_BY_ID } from '../data/heroes.js';
 import { NODES } from '../data/upgrades.js';
 import { incomePerSec, teamDps, affordableCount, currentLuck, clearSave, canImproveTeam } from '../game/logic.js';
-import { heroSprite } from './portraits.js';
+import { heroSprite } from './sprites.js';
 import { $, el, setText, escapeHtml, rarityStyle } from './dom.js';
 import { fmt, fmtTime, fmtOdds } from '../util.js';
 
@@ -131,7 +131,7 @@ export class Hud {
       if (k) {
         const r = RARITIES[parseKey(k).hero.rarity];
         s.style.borderColor = rarityStyle(r).border;
-        s.innerHTML = `<img src="${heroSprite(k)}" alt="${escapeHtml(displayName(k))}">`;
+        s.innerHTML = `<img src="${heroSprite(k, { size: 128 })}" alt="${escapeHtml(displayName(k))}">`;
         s.title = displayName(k);
       }
       wrap.appendChild(s);

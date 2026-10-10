@@ -2,7 +2,7 @@
 // Also the active-play speed boosts: Tap to Hurry, Roll Combo and Speed Dice (Roll Rush).
 import { HEROES, RARITIES, parseKey, displayName, stackKey } from '../data/heroes.js';
 import { doRoll, rollHeroId, autoFill, currentLuck } from '../game/logic.js';
-import { heroSprite } from './portraits.js';
+import { heroSprite, preloadSprite } from './sprites.js';
 import { $, el, setText, escapeHtml, rarityStyle } from './dom.js';
 import { fmtOdds, rand } from '../util.js';
 import { icon } from './icons.js';
@@ -131,6 +131,7 @@ export class Roller {
 
   // Fill the reel with random heroes and put the result where the reel will stop.
   buildReel(winKey) {
+    preloadSprite(winKey, { size: 512 }); // ready for the big reveal if this turns out rare
     const luck = Math.max(1, this.game.stats.totalLuck * 0.6);
     this.cards = [];
     const frag = document.createDocumentFragment();
@@ -140,7 +141,7 @@ export class Roller {
       else if (Math.abs(i - WIN_INDEX) === 1 && Math.random() < 0.3) key = stackKey(TEASERS[Math.floor(Math.random() * TEASERS.length)].id);
       else key = stackKey(rollHeroId(luck));
       const r = RARITIES[parseKey(key).hero.rarity];
-      const card = el('div', 'reel-card', `<img src="${heroSprite(key)}" alt="">`);
+      const card = el('div', 'reel-card', `<img src="${heroSprite(key, { size: 128 })}" alt="">`);
       card.style.setProperty('--rc', rarityColor(r));
       frag.appendChild(card);
       this.cards.push(key);
@@ -221,7 +222,7 @@ export class Roller {
     rar.textContent = `${r.name.toUpperCase()}!`;
     rar.className = `reveal-rarity outline ${rs.cls}`;
     rar.style.color = r.rainbow ? '' : r.color;
-    $('revealImg').src = heroSprite(key);
+    $('revealImg').src = heroSprite(key, { size: 512 });
     $('revealName').textContent = displayName(key);
     $('revealOdds').textContent = fmtOdds(hero.odds);
     box.hidden = false;
