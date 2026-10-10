@@ -4,12 +4,17 @@ A 3D browser game: roll for blocky heroes, defend your town from waves of monste
 
 ## How to play
 
-- **Roll** for heroes. Every hero has a "1 in N" chance, from the Villager (1 in 2) to Death Incarnate (1 in 1M). Rolls can also come out **Golden** (x2.5 damage) or **HUGE** (x4 damage, bigger).
+- **Roll** for heroes. A reel of hero cards spins for about 3 seconds and lands on your hero. Every hero has a "1 in N" chance, from the Villager (1 in 2) to Death Incarnate (1 in 1M). Rolls can also come out **Golden** (x2.5 damage) or **HUGE** (x4 damage, bigger).
+- Make rolls faster with upgrades from the Rolling branch:
+  - **Roll Speed → Ludicrous Rolls**: each one cuts 18% off every roll.
+  - **Tap to Hurry (I–III)**: tap ROLL while the reel spins to skip ahead.
+  - **Roll Combo / Combo Master**: press ROLL again within 1.5s of a reveal to stack a combo. Each stack makes rolls faster. Auto Roll doesn't build combos.
+  - **Speed Dice**: a golden die sometimes bounces across the screen. Tap it for a Roll Rush (2x faster rolls, or 3x with Super Rush).
 - Heroes stand on the glowing pads around the Town Hall and attack monsters walking in from the portals. New heroes fill empty pads automatically; open **Heroes** to swap in stronger ones (a red `!` means a better hero is waiting).
 - Every wave your town survives pays out gold. If enemies get through and the Town HP hits 0, you drop back a wave, so you can farm gold and roll for stronger heroes.
 - Tap or click enemies to hit them yourself.
 - Spend gold in **Upgrades**. Buying a hex reveals its neighbours. Branches:
-  - **Rolling**: faster rolls, Auto Roll, Double and Triple Roll, offline rolls
+  - **Rolling**: faster rolls, Tap to Hurry, combos, Speed Dice, Auto Roll, Double and Triple Roll, offline rolls
   - **Luck**: more luck, Lucky Streak (every 10th roll), Golden and HUGE chances
   - **Combat**: up to 8 hero slots, damage, attack speed, range, crits
   - **Clicking**: click damage, splash, crits, auto clickers, Thunder Clicks
@@ -23,7 +28,7 @@ A 3D browser game: roll for blocky heroes, defend your town from waves of monste
 
 | Action | Mouse / touch | Keyboard |
 | --- | --- | --- |
-| Roll | Roll button | `Space` or `R` |
+| Roll (tap again while spinning to hurry) | Roll button | `Space` or `R` |
 | Toggle Auto Roll | Auto button | `A` |
 | Upgrades | Upgrades button | `U` |
 | Heroes | Heroes button | `H` |
@@ -57,8 +62,8 @@ src/data/            heroes, enemies and the upgrade tree definitions
 src/game/logic.js    rules: rolling, hero power, equipping, gold, saving
 src/game/battle.js   waves, enemies, hero attacks, cannons, towers, clicks
 src/world/           three.js scene, town builder, blocky character rigs, effects
-src/ui/              upgrade tree, heroes panel, roll display, HUD
+src/ui/              upgrade tree, heroes panel, roll reel, hero sprites, HUD
 vendor/              three.js r185 (MIT licence)
 ```
 
-Everything is drawn in code: characters are built from boxes, textures and faces are painted on canvases, and icons are inline SVG. There are no image or sound files.
+Everything is drawn in code: the 3D characters are built from boxes, the 2D hero sprites (`src/ui/sprites.js`) and textures are painted on canvases, and icons are inline SVG. There are no image or sound files.

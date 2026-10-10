@@ -1,7 +1,7 @@
 // Heroes panel: equipped slots, backpack cards and the hero index.
 import { HEROES, RARITIES, parseKey, displayName, stackKey, masteryStars, MASTERY_STEPS } from '../data/heroes.js';
 import { heroStats, equipHero, equipBest, equippedCount, normalizeEquipped } from '../game/logic.js';
-import { portrait } from './portraits.js';
+import { heroSprite } from './portraits.js';
 import { $, el, iconSpan, escapeHtml, rarityStyle } from './dom.js';
 import { icon } from './icons.js';
 import { fmt, fmtOdds } from '../util.js';
@@ -62,7 +62,7 @@ export class HeroesPanel {
       } else {
         const { hero } = parseKey(key);
         const rs = rarityStyle(RARITIES[hero.rarity]);
-        s = el('button', 'slot', `<img src="${portrait(key)}" alt="${escapeHtml(displayName(key))}"><span class="slot-x">${icon('close')}</span>`);
+        s = el('button', 'slot', `<img src="${heroSprite(key)}" alt="${escapeHtml(displayName(key))}"><span class="slot-x">${icon('close')}</span>`);
         s.style.borderColor = rs.border;
         s.title = `${displayName(key)}: tap to unequip`;
         s.addEventListener('click', () => {
@@ -94,7 +94,7 @@ export class HeroesPanel {
       const eqTag = eq ? `<span class="c-eq">EQUIPPED${eq > 1 ? ' x' + eq : ''}</span>` : '';
       card.innerHTML = `
         <span class="c-tags">${varTag}${eqTag}</span><span class="c-count">x${fmt(state.inv[key])}</span>
-        <img src="${portrait(key)}" alt="" loading="lazy">
+        <img src="${heroSprite(key)}" alt="" loading="lazy">
         <div class="c-name outline">${escapeHtml(hero.name)}</div>
         <div class="c-rarity ${rs.cls}">${r.name}</div>
         <div class="c-stat">${fmt(st.dps)} DPS</div>
@@ -132,7 +132,7 @@ export class HeroesPanel {
       const eff = Math.max(1, hero.odds / stats.totalLuck);
       card.innerHTML = `
         ${known ? `<span class="c-count">x${fmt(copies)}</span>` : ''}
-        <img src="${portrait(key, !known)}" alt="" loading="lazy">
+        <img src="${heroSprite(key, { hidden: !known })}" alt="" loading="lazy">
         <div class="c-name outline">${known ? escapeHtml(hero.name) : '???'}</div>
         <div class="c-rarity ${rs.cls}">${r.name}</div>
         <div class="c-stat">${fmtOdds(hero.odds)}</div>

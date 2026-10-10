@@ -14,6 +14,8 @@ import { Roller } from './ui/roll.js';
 import { Hud } from './ui/hud.js';
 import { $, fillIcons } from './ui/dom.js';
 import { fmt } from './util.js';
+import { HEROES, stackKey } from './data/heroes.js';
+import { heroSprite } from './ui/portraits.js';
 
 const loaded = loadState();
 const state = loaded || newState();
@@ -119,7 +121,7 @@ canvas.addEventListener('pointerup', (e) => {
 window.addEventListener('keydown', (e) => {
   if (e.target.closest?.('input')) return;
   const k = e.key.toLowerCase();
-  if (k === ' ' || k === 'r') { e.preventDefault(); audio.unlock(); roller.press(); }
+  if (k === ' ' || k === 'r') { e.preventDefault(); if (!e.repeat) { audio.unlock(); roller.press(); } }
   else if (k === 'a') roller.toggleAuto();
   else if (k === 'u') (tree.isOpen ? tree.close() : tree.open());
   else if (k === 'h') (heroes.isOpen ? heroes.close() : heroes.open('backpack'));
@@ -161,6 +163,13 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 setTimeout(() => $('loading').classList.add('done'), 150);
+
+// Draw every hero sprite in the background, a few per frame, so the first reel spin is smooth.
+const toWarm = HEROES.map((h) => stackKey(h.id));
+(function warm() {
+  for (let i = 0; i < 3 && toWarm.length; i++) heroSprite(toWarm.shift());
+  if (toWarm.length) requestAnimationFrame(warm);
+})();
 if (!loaded) hud.banner('Defend your town!', 'Roll heroes · Survive waves · Buy upgrades', '', 3.5);
 
 // Handy for debugging from the console.

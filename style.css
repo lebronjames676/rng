@@ -160,6 +160,60 @@ button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .auto-btn:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
 .roll-meta { font-size: 14px; font-weight: 600; color: #fff; text-shadow: 0 2px 0 var(--ink), 0 -1px 0 var(--ink), 1px 0 0 var(--ink), -1px 0 0 var(--ink); pointer-events: none; text-align: center; }
 
+/* Roll reel: a strip of hero sprite cards that spins and lands on the result */
+.reel {
+  position: relative; width: min(450px, 92vw); height: 88px; margin-bottom: 6px; overflow: hidden; border-radius: 18px;
+  background: linear-gradient(#1e2150, #121433); border: 3px solid #fff; box-shadow: 0 5px 0 var(--ink), inset 0 0 22px rgba(0, 0, 0, 0.7);
+}
+.reel-strip { position: absolute; left: 0; top: 6px; display: flex; gap: 6px; will-change: transform; }
+.reel-card {
+  flex: none; width: 70px; height: 70px; border-radius: 14px; border: 3px solid var(--rc);
+  background: radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--rc) 45%, #ffffff) 0%, color-mix(in srgb, var(--rc) 40%, #1d2044) 72%);
+}
+.reel-card img { width: 100%; height: 100%; display: block; }
+.reel-card.win { animation: winPop 0.5s cubic-bezier(.2, 1.6, .4, 1); box-shadow: 0 0 20px var(--rc), 0 0 6px #fff; border-color: #fff; }
+@keyframes winPop { 0% { transform: scale(0.85); } 100% { transform: scale(1); } }
+.reel::before, .reel::after { content: ''; position: absolute; top: 0; bottom: 0; width: 22%; z-index: 1; pointer-events: none; }
+.reel::before { left: 0; background: linear-gradient(90deg, #121433, transparent); }
+.reel::after { right: 0; background: linear-gradient(-90deg, #121433, transparent); }
+.reel-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: var(--gold); box-shadow: 0 0 10px var(--gold); z-index: 2; pointer-events: none; }
+.reel-marker::before, .reel-marker::after { content: ''; position: absolute; left: 50%; margin-left: -10px; border: 10px solid transparent; }
+.reel-marker::before { top: -2px; border-top-color: var(--gold); }
+.reel-marker::after { bottom: -2px; border-bottom-color: var(--gold); }
+
+.roll-status { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; min-height: 0; pointer-events: none; }
+.status-pill {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px 7px 5px; border-radius: 999px;
+  border: 3px solid #fff; font-size: 15px; font-weight: 700; box-shadow: 0 3px 0 var(--ink); overflow: hidden;
+  text-shadow: 0 2px 0 var(--ink), 0 -1px 0 var(--ink), 1px 0 0 var(--ink), -1px 0 0 var(--ink);
+}
+.status-pill .ico { width: 24px; height: 24px; }
+.combo-pill { background: linear-gradient(#ff8a5c, #c2361f); }
+.rush-pill { background: linear-gradient(#ffe36e, var(--gold-dark)); animation: rushGlow 0.8s ease-in-out infinite; }
+.pill-timer { position: absolute; left: 10px; right: 10px; bottom: 2px; height: 4px; border-radius: 99px; background: rgba(0, 0, 0, 0.35); overflow: hidden; }
+.pill-timer span { display: block; height: 100%; width: 100%; background: #fff; border-radius: 99px; }
+@keyframes rushGlow { 50% { box-shadow: 0 3px 0 var(--ink), 0 0 18px var(--gold); } }
+
+.roll-btn.hurry { background: linear-gradient(#ffd36e, #e0731a); animation: hurryPulse 0.5s ease-in-out infinite; }
+@keyframes hurryPulse { 50% { box-shadow: 0 7px 0 var(--ink), 0 0 22px #ffb347; } }
+.roll-btn.zap { animation: zap 0.18s; }
+@keyframes zap { 0% { transform: translateY(5px) scale(0.96); } 100% { transform: none; } }
+.roll-btn.nudge { animation: shake 0.3s; }
+
+/* Speed Die pickup */
+.speed-die {
+  position: absolute; z-index: 15; width: 92px; height: 92px; margin: -46px 0 0 -46px; display: grid; place-items: center;
+  border-radius: 24px; background: radial-gradient(circle, rgba(255, 236, 140, 0.95), rgba(255, 180, 40, 0.0) 70%);
+  animation: dieBob 0.9s ease-in-out infinite; cursor: pointer;
+}
+.speed-die .ico { width: 70px; height: 70px; filter: drop-shadow(0 4px 0 var(--ink)); animation: dieSpin 2.4s linear infinite; }
+.speed-die .die-tap { position: absolute; bottom: -18px; font-size: 18px; font-weight: 700; color: #fff36b; }
+.speed-die.leaving { animation: dieBob 0.9s ease-in-out infinite, blink 0.3s steps(2) infinite; }
+@keyframes dieBob { 50% { transform: translateY(-12px) scale(1.06); } }
+@keyframes dieSpin { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+@keyframes blink { 50% { opacity: 0.35; } }
+.banner.rush .banner-title { color: #fff36b; }
+
 /* Team panel */
 .team {
   position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom));
@@ -344,6 +398,12 @@ button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   .auto-btn { width: 70px; }
   .rd-name { font-size: 30px; }
   .roll-display { min-height: 90px; }
+  .reel { height: 80px; border-width: 2px; }
+  .reel-strip { top: 6px; gap: 5px; }
+  .reel-card { width: 64px; height: 64px; border-radius: 11px; }
+  .status-pill { font-size: 12px; }
+  .speed-die { width: 76px; height: 76px; margin: -38px 0 0 -38px; }
+  .speed-die .ico { width: 56px; height: 56px; }
   .team { bottom: 150px; max-width: 150px; padding: 4px 6px 6px; }
   .team-slots { grid-template-columns: repeat(4, 30px); gap: 3px; }
   .mini-slot { width: 30px; height: 30px; border-radius: 8px; border-width: 2px; }
@@ -366,7 +426,9 @@ button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   .wave-card { grid-area: wave; justify-self: center; width: min(320px, 100%); }
   .hud-col.left { grid-area: left; flex-direction: row; flex-wrap: wrap; gap: 6px; }
   .hud-col.right { grid-area: right; max-width: none; }
-  .boss-bar { top: 150px; }
+  .boss-bar { top: 164px; width: 90vw; }
+  .boss-name { font-size: 17px; margin-bottom: 2px; }
+  .left-menu, .team { top: 222px; bottom: auto; transform: none; }
   #zoomIn, #zoomOut { display: none; }
   .tree-modal .modal-title { font-size: 20px; }
   .tab { font-size: 16px; padding: 5px 10px; }

@@ -48,3 +48,6 @@ export function portrait(key, hidden = false) {
     return '';
   }
 }
+
+// Temporary stand-in until the 2D sprite renderer (sprites.js) lands.
+export const heroSprite = (key, { hidden = false } = {}) => portrait(key, hidden);

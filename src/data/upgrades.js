@@ -17,24 +17,36 @@ export const CATEGORY = {
   luck:   { name: 'Luck',    color: '#6ee36f' },
 };
 
+const SPEED = (s) => { s.rollTime *= 0.82; };
+
 // [id, name, icon, category, a, b, costMult, description, effect(stats, level), opts]
 const RAW = [
   // ---------- Rolling ----------
-  ['rollSpeed', 'Roll Speed', 'dice', 'roll', 1, 0, 1, 'Rolls are 18% faster.', (s) => { s.rollTime *= 0.82; }],
-  ['autoRoll', 'Auto Roll', 'autodice', 'roll', 1, 1, 0.8, 'Unlocks the Auto Roll button. Your town rolls for you.', (s) => { s.autoRoll = true; }],
-  ['quickRolls', 'Quick Rolls', 'dice', 'roll', 2, 0, 1, 'Rolls are 18% faster.', (s) => { s.rollTime *= 0.82; }],
-  ['offline1', 'Offline Rolls I', 'moon', 'roll', 2, 1, 1, 'Keep rolling while you are away: 1 roll every 30s.', (s) => { s.offlineInterval = 30; }],
-  ['autoEquip', 'Auto-Equip Best', 'equip', 'roll', 1, 2, 0.8, 'Your strongest heroes are equipped automatically after every roll.', (s) => { s.autoEquip = true; }],
-  ['quickerRolls', 'Quicker Rolls', 'dice', 'roll', 3, 0, 1, 'Rolls are 18% faster.', (s) => { s.rollTime *= 0.82; }],
-  ['offline2', 'Offline Rolls II', 'moon', 'roll', 3, 1, 1, 'Offline: 1 roll every 15s.', (s) => { s.offlineInterval = 15; }],
-  ['doubleRoll', 'Double Roll', 'dice2', 'roll', 2, 2, 1.5, 'Every roll gives you 2 heroes.', (s) => { s.rollsPerRoll = Math.max(s.rollsPerRoll, 2); }],
-  ['fasterRolls', 'Faster Rolls', 'dice', 'roll', 4, 0, 1, 'Rolls are 18% faster.', (s) => { s.rollTime *= 0.82; }],
-  ['offline3', 'Offline Rolls III', 'moon', 'roll', 4, 1, 1, 'Offline: 1 roll every 8s.', (s) => { s.offlineInterval = 8; }],
-  ['tripleRoll', 'Triple Roll', 'dice2', 'roll', 3, 2, 2, 'Every roll gives you 3 heroes.', (s) => { s.rollsPerRoll = Math.max(s.rollsPerRoll, 3); }],
-  ['superFastRolls', 'Super Fast Rolls', 'dice', 'roll', 5, 0, 1, 'Rolls are 18% faster.', (s) => { s.rollTime *= 0.82; }],
-  ['offline4', 'Offline Rolls IV', 'moon', 'roll', 5, 1, 1, 'Offline: 1 roll every 4s.', (s) => { s.offlineInterval = 4; }],
-  ['hyperRolls', 'Hyper Rolls', 'dice', 'roll', 6, 0, 1, 'Rolls are 18% faster.', (s) => { s.rollTime *= 0.82; }],
-  ['ludicrousRolls', 'Ludicrous Rolls', 'dice', 'roll', 7, 0, 1, 'Rolls are 18% faster.', (s) => { s.rollTime *= 0.82; }],
+  // Base rolls take 3s. The outer ring trims that down; the inner branches add ways to roll faster by playing actively.
+  ['rollSpeed', 'Roll Speed', 'dice', 'roll', 1, 0, 1, 'Rolls take 18% less time.', SPEED],
+  ['quickRolls', 'Quick Rolls', 'dice', 'roll', 2, 0, 1, 'Rolls take 18% less time.', SPEED],
+  ['hurry1', 'Tap to Hurry', 'tap', 'roll', 1, 1, 0.5, 'While a roll is spinning, tap ROLL to speed it up. Each tap skips 7% of the roll.', (s) => { s.hurry = Math.max(s.hurry, 0.07); }],
+  ['quickerRolls', 'Quicker Rolls', 'dice', 'roll', 3, 0, 1, 'Rolls take 18% less time.', SPEED],
+  ['autoRoll', 'Auto Roll', 'autodice', 'roll', 2, 1, 0.4, 'Unlocks the Auto Roll button. Your town rolls for you.', (s) => { s.autoRoll = true; }],
+  ['combo', 'Roll Combo', 'combo', 'roll', 1, 2, 0.6, 'Press ROLL again within 1.5s of a reveal to build a combo. Each combo stack makes rolls 4% faster (up to 10 stacks). Auto Roll does not build combos.', (s) => { s.comboMax = Math.max(s.comboMax, 10); }],
+  ['fasterRolls', 'Faster Rolls', 'dice', 'roll', 4, 0, 1, 'Rolls take 18% less time.', SPEED],
+  ['speedDice', 'Speed Dice', 'speeddie', 'roll', 3, 1, 0.4, 'A golden Speed Die sometimes bounces onto the screen. Tap it for 15s of Roll Rush: rolls go 2x faster.', (s) => { s.rush = true; }],
+  ['autoEquip', 'Auto-Equip Best', 'equip', 'roll', 2, 2, 0.3, 'Your strongest heroes are equipped automatically after every roll.', (s) => { s.autoEquip = true; }],
+  ['hurry2', 'Hurry II', 'tap', 'roll', 1, 3, 0.5, 'Each tap skips 10% of a spinning roll.', (s) => { s.hurry = Math.max(s.hurry, 0.1); }],
+  ['superFastRolls', 'Super Fast Rolls', 'dice', 'roll', 5, 0, 1, 'Rolls take 18% less time.', SPEED],
+  ['offline1', 'Offline Rolls I', 'moon', 'roll', 4, 1, 0.15, 'Keep rolling while you are away: 1 roll every 30s.', (s) => { s.offlineInterval = 30; }],
+  ['doubleRoll', 'Double Roll', 'dice2', 'roll', 3, 2, 0.4, 'Every roll gives you 2 heroes.', (s) => { s.rollsPerRoll = Math.max(s.rollsPerRoll, 2); }],
+  ['longerRush', 'Longer Rush', 'speeddie', 'roll', 2, 3, 0.4, 'Roll Rush lasts 25s.', (s) => { s.rushTime = Math.max(s.rushTime, 25); }],
+  ['comboMaster', 'Combo Master', 'combo', 'roll', 1, 4, 0.5, 'Combos stack up to 25 times and each stack makes rolls 5% faster.', (s) => { s.comboMax = 25; s.comboStep = 0.05; }],
+  ['hyperRolls', 'Hyper Rolls', 'dice', 'roll', 6, 0, 1, 'Rolls take 18% less time.', SPEED],
+  ['offline2', 'Offline Rolls II', 'moon', 'roll', 5, 1, 0.1, 'Offline: 1 roll every 15s.', (s) => { s.offlineInterval = Math.min(s.offlineInterval || 99, 15); }],
+  ['tripleRoll', 'Triple Roll', 'dice2', 'roll', 4, 2, 0.5, 'Every roll gives you 3 heroes.', (s) => { s.rollsPerRoll = Math.max(s.rollsPerRoll, 3); }],
+  ['superRush', 'Super Rush', 'speeddie', 'roll', 3, 3, 0.4, 'Roll Rush makes rolls 3x faster.', (s) => { s.rushMult = 3; }],
+  ['hurry3', 'Hurry III', 'tap', 'roll', 2, 4, 0.4, 'Each tap skips 14% of a roll, and taps can cut up to 75% of it.', (s) => { s.hurry = 0.14; s.hurryCap = 0.75; }],
+  ['frequentDice', 'Frequent Dice', 'speeddie', 'roll', 1, 5, 0.4, 'Speed Dice show up about twice as often.', (s) => { s.diceEvery = [20, 38]; }],
+  ['ludicrousRolls', 'Ludicrous Rolls', 'dice', 'roll', 7, 0, 0.5, 'Rolls take 18% less time.', SPEED],
+  ['offline3', 'Offline Rolls III', 'moon', 'roll', 6, 1, 0.03, 'Offline: 1 roll every 8s.', (s) => { s.offlineInterval = Math.min(s.offlineInterval || 99, 8); }],
+  ['offline4', 'Offline Rolls IV', 'moon', 'roll', 5, 2, 0.05, 'Offline: 1 roll every 4s.', (s) => { s.offlineInterval = Math.min(s.offlineInterval || 99, 4); }],
 
   // ---------- Town ----------
   ['house', 'Cozy Houses', 'house', 'town', 1, 0, 0.7, 'Build houses. +2 gold per second.', (s) => { s.income += 2; s.town.houses += 2; }],
@@ -183,7 +195,8 @@ export function canBuy(node, upgrades) {
 
 export function baseStats() {
   return {
-    rollTime: 2.0, autoRoll: false, rollsPerRoll: 1, autoEquip: false, offlineInterval: 0,
+    rollTime: 3.0, autoRoll: false, rollsPerRoll: 1, autoEquip: false, offlineInterval: 0,
+    hurry: 0, hurryCap: 0.6, comboMax: 0, comboStep: 0.04, rush: false, rushTime: 15, rushMult: 2, diceEvery: [45, 75],
     luck: 1, luckMult: 1, streakMult: 1, goldenChance: 0.01, hugeChance: 0,
     slots: 2, heroDmg: 1, atkSpeed: 1, range: 1, critChance: 0, critMult: 3, masteryMult: 1,
     clickBase: 5, clickMult: 1, clickDpsPct: 0, clickSplash: 0, clickCrit: 0, autoClick: 0, thunder: false,

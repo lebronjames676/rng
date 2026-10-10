@@ -222,7 +222,8 @@ export class TreeView {
     const cat = CATEGORY[node.cat];
     $('niIcon').innerHTML = icon(node.icon);
     setText($('niName'), node.max > 1 ? `${node.name} (Lv ${lvl}/${node.max})` : node.name);
-    setText($('niDesc'), `${cat ? cat.name + ' · ' : ''}${node.desc}`);
+    const extra = node.desc.startsWith('Rolls take') ? ` Right now a roll takes ${this.game.stats.rollTime.toFixed(2)}s.` : '';
+    setText($('niDesc'), `${cat ? cat.name + ' · ' : ''}${node.desc}${extra}`);
     buy.hidden = false;
     const st = nodeState(node, state.upgrades);
     if (node.root) { buy.disabled = true; buy.innerHTML = 'Home'; return; }

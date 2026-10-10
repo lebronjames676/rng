@@ -56,7 +56,7 @@ export class Audio {
     if (!this.enabled || !this.ctx) return;
     // Throttle very frequent sounds.
     const now = this.ctx.currentTime;
-    const gap = { pop: 0.05, hit: 0.03, tap: 0.06, swing: 0.06, bow: 0.06, magic: 0.07, zap: 0.08, boom: 0.08, tick: 0.03 }[name] || 0;
+    const gap = { pop: 0.05, hit: 0.03, tap: 0.06, swing: 0.06, bow: 0.06, magic: 0.07, zap: 0.08, boom: 0.08, tick: 0.035, hurry: 0.03 }[name] || 0;
     if (gap && now - (this.last[name] || 0) < gap) return;
     this.last[name] = now;
     switch (name) {
@@ -91,6 +91,20 @@ export class Audio {
       case 'bossDie': this.noise(0.8, { vol: 0.35, freq: 900 }); [523, 784, 1047].forEach((f, i) => this.tone(f, 0.3, { type: 'triangle', vol: 0.2, delay: 0.2 + i * 0.1 })); break;
       case 'thunder': this.noise(0.7, { vol: 0.4, freq: 1500 }); break;
       case 'click': this.tone(800, 0.04, { type: 'square', vol: 0.06 }); break;
+      case 'hurry': this.tone(700 + Math.min(10, arg || 0) * 70, 0.06, { type: 'square', vol: 0.07, slide: 1.4 }); break;
+      case 'combo': {
+        const f = 440 * Math.pow(2, Math.min(24, arg || 0) / 12);
+        this.tone(f, 0.12, { type: 'triangle', vol: 0.15 });
+        this.tone(f * 1.5, 0.15, { type: 'triangle', vol: 0.12, delay: 0.05 });
+        break;
+      }
+      case 'comboLost': this.tone(330, 0.2, { type: 'triangle', vol: 0.12, slide: 0.6 }); break;
+      case 'dieSpawn': [1047, 1319, 1568].forEach((f, i) => this.tone(f, 0.1, { type: 'sine', vol: 0.12, delay: i * 0.06 })); break;
+      case 'rush':
+        [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.16, { type: 'square', vol: 0.09, delay: i * 0.06 }));
+        this.noise(0.4, { vol: 0.12, freq: 5000, delay: 0.1 });
+        break;
+      case 'rushEnd': [784, 523].forEach((f, i) => this.tone(f, 0.18, { type: 'triangle', vol: 0.12, delay: i * 0.1 })); break;
     }
   }
 }

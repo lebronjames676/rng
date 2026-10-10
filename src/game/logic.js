@@ -25,7 +25,7 @@ export function newState() {
     bestRoll: 'villager',
     lastSeen: Date.now(),
     settings: { sound: true, autoRoll: false, shadows: true },
-    tutorial: { rolled: false, upgraded: false },
+    tutorial: { rolled: false, upgraded: false, hurried: false, comboed: false },
   };
 }
 

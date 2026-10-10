@@ -72,10 +72,24 @@
 
       <div class="roll-area">
         <div class="roll-display" id="rollDisplay" aria-live="polite">
+          <div class="reel" id="reel" hidden>
+            <div class="reel-strip" id="reelStrip"></div>
+            <div class="reel-marker"></div>
+          </div>
           <div class="rd-rarity" id="rdRarity"></div>
           <div class="rd-name outline" id="rdName"></div>
           <div class="rd-odds" id="rdOdds"></div>
           <div class="rd-extra" id="rdExtra"></div>
+        </div>
+        <div class="roll-status">
+          <div class="status-pill combo-pill" id="comboPill" hidden>
+            <span class="ico" data-icon="combo"></span><span id="comboText"></span>
+            <span class="pill-timer"><span id="comboBar"></span></span>
+          </div>
+          <div class="status-pill rush-pill" id="rushPill" hidden>
+            <span class="ico" data-icon="speeddie"></span><span id="rushText"></span>
+            <span class="pill-timer"><span id="rushBar"></span></span>
+          </div>
         </div>
         <div class="roll-row">
           <button class="roll-btn" id="rollBtn">

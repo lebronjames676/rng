@@ -28,7 +28,8 @@ export function createScene(container) {
   scene.add(sun);
 
   const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 400);
-  const view = { yaw: 0.0, pitch: 0.88, dist: 46, target: new THREE.Vector3(0, 0, 0) };
+  // The target sits a little toward the camera so the town shows above the roll reel.
+  const view = { yaw: 0.0, pitch: 0.88, dist: 46, target: new THREE.Vector3(0, 0, 4.5) };
 
   function placeCamera() {
     const { yaw, pitch, dist, target } = view;

@@ -2,7 +2,7 @@
 import { RARITIES, parseKey, displayName, HERO_BY_ID } from '../data/heroes.js';
 import { NODES } from '../data/upgrades.js';
 import { incomePerSec, teamDps, affordableCount, currentLuck, clearSave, canImproveTeam } from '../game/logic.js';
-import { portrait } from './portraits.js';
+import { heroSprite } from './portraits.js';
 import { $, el, setText, escapeHtml, rarityStyle } from './dom.js';
 import { fmt, fmtTime, fmtOdds } from '../util.js';
 
@@ -69,6 +69,7 @@ export class Hud {
       $('bossFill').style.width = `${Math.max(0, boss.hp / boss.maxHp) * 100}%`;
     }
 
+    this.updateRollStatus();
     setText($('teamDps'), fmt(teamDps(state, stats)));
     this.renderTeam();
     setText($('rollMeta'), `Rolls: ${fmt(state.rolls)} · Best: ${HERO_BY_ID[state.bestRoll].name} (${fmtOdds(HERO_BY_ID[state.bestRoll].odds)})`);
@@ -86,6 +87,24 @@ export class Hud {
       this.bannerT -= dt;
       if (this.bannerT <= 0.4) $('banner').classList.add('out');
       if (this.bannerT <= 0) $('banner').hidden = true;
+    }
+  }
+
+  // Combo and Roll Rush pills above the roll button, each with a draining timer bar.
+  updateRollStatus() {
+    const { stats, roller } = this.game;
+    const cp = $('comboPill');
+    cp.hidden = !(stats.comboMax > 0 && roller.combo > 0);
+    if (!cp.hidden) {
+      const pct = Math.round(roller.combo * stats.comboStep * 100);
+      setText($('comboText'), `Combo x${roller.combo} · +${pct}% speed`);
+      $('comboBar').style.width = roller.busy || roller.revealOpen ? '100%' : `${Math.max(0, roller.comboT / 1.5) * 100}%`;
+    }
+    const rp = $('rushPill');
+    rp.hidden = roller.rushT <= 0;
+    if (!rp.hidden) {
+      setText($('rushText'), `ROLL RUSH x${stats.rushMult} · ${Math.ceil(roller.rushT)}s`);
+      $('rushBar').style.width = `${(roller.rushT / stats.rushTime) * 100}%`;
     }
   }
 
@@ -112,7 +131,7 @@ export class Hud {
       if (k) {
         const r = RARITIES[parseKey(k).hero.rarity];
         s.style.borderColor = rarityStyle(r).border;
-        s.innerHTML = `<img src="${portrait(k)}" alt="${escapeHtml(displayName(k))}">`;
+        s.innerHTML = `<img src="${heroSprite(k)}" alt="${escapeHtml(displayName(k))}">`;
         s.title = displayName(k);
       }
       wrap.appendChild(s);
@@ -135,7 +154,11 @@ export class Hud {
     const { state, battle } = this.game;
     const h = $('hint');
     let target = null, text = '', side = 'down';
+    const { roller, stats } = this.game;
     if (!state.tutorial.rolled) { target = $('rollBtn'); text = 'Roll for heroes!'; }
+    else if (stats.hurry > 0 && !state.tutorial.hurried && roller.busy) { target = $('rollBtn'); text = 'Tap ROLL fast to hurry the spin!'; }
+    else if (stats.comboMax > 0 && !state.tutorial.comboed && !roller.busy && roller.comboT > 0 && !roller.autoOn) { target = $('rollBtn'); text = 'Roll again now to start a combo!'; }
+    else if (roller.die) { text = 'Tap the Speed Die for a Roll Rush!'; }
     else if (!state.tutorial.upgraded && affordableCount(state, NODES) > 0) { target = $('upgradesBtn'); text = 'You can afford an upgrade!'; side = 'left'; }
     else if (state.clicks < 3 && battle.phase === 'fighting' && battle.enemies.length && state.wave <= 3) { text = 'Tap enemies to hit them!'; }
     else if (!$('heroBadge').hidden && state.rolls < 60) { target = $('heroesBtn'); text = 'Equip your stronger heroes!'; side = 'left'; }
