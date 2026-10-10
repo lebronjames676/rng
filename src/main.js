@@ -14,7 +14,7 @@ import { Roller } from './ui/roll.js';
 import { Hud } from './ui/hud.js';
 import { $, fillIcons } from './ui/dom.js';
 import { fmt } from './util.js';
-import { warmSprites } from './ui/sprites.js';
+import { warmSprites, setWarmPause } from './ui/sprites.js';
 
 const loaded = loadState();
 const state = loaded || newState();
@@ -133,14 +133,16 @@ window.addEventListener('keydown', (e) => {
 
 // ---------------- Saving ----------------
 function save() { if (!game.resetting) saveState(state); }
+// Leaving mid-spin: hand over the spinning roll's heroes first so they are saved.
+function saveNow() { roller.commitPending(); save(); }
 setInterval(save, 10000);
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { hiddenAt = Date.now(); save(); return; }
+  if (document.hidden) { hiddenAt = Date.now(); saveNow(); return; }
   const away = (Date.now() - hiddenAt) / 1000;
   if (hiddenAt && away > 60) welcomeBack(away);
 });
-window.addEventListener('pagehide', save);
+window.addEventListener('pagehide', saveNow);
 
 // ---------------- Loop ----------------
 let last = performance.now();
@@ -164,6 +166,7 @@ requestAnimationFrame(frame);
 setTimeout(() => $('loading').classList.add('done'), 150);
 
 // Draw hero sprites in idle time so the first reel spin and panels open instantly.
+setWarmPause(() => roller.busy);
 warmSprites();
 if (!loaded) hud.banner('Defend your town!', 'Roll heroes · Survive waves · Buy upgrades', '', 3.5);
 

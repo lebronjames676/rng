@@ -3,6 +3,7 @@ import { RARITIES, parseKey, displayName, HERO_BY_ID } from '../data/heroes.js';
 import { NODES } from '../data/upgrades.js';
 import { incomePerSec, teamDps, affordableCount, currentLuck, clearSave, canImproveTeam } from '../game/logic.js';
 import { heroSprite } from './sprites.js';
+import { COMBO_WINDOW } from './roll.js';
 import { $, el, setText, escapeHtml, rarityStyle } from './dom.js';
 import { fmt, fmtTime, fmtOdds } from '../util.js';
 
@@ -93,17 +94,21 @@ export class Hud {
   // Combo and Roll Rush pills above the roll button, each with a draining timer bar.
   updateRollStatus() {
     const { stats, roller } = this.game;
+    // Keep room for the pills once either boost is unlocked, so the reel doesn't jump when they appear.
+    $('rollStatus').classList.toggle('reserve', stats.comboMax > 0 || stats.rush);
+    // When boosts hit the shortest allowed spin, say so instead of promising more speed.
+    const max = roller.speedMult() > roller.effectiveMult() + 1e-6 ? ' · MAX' : '';
     const cp = $('comboPill');
     cp.hidden = !(stats.comboMax > 0 && roller.combo > 0);
     if (!cp.hidden) {
       const pct = Math.round(roller.combo * stats.comboStep * 100);
-      setText($('comboText'), `Combo x${roller.combo} · +${pct}% speed`);
-      $('comboBar').style.width = roller.busy || roller.revealOpen ? '100%' : `${Math.max(0, roller.comboT / 1.5) * 100}%`;
+      setText($('comboText'), `Combo x${roller.combo} · +${pct}% speed${max}`);
+      $('comboBar').style.width = roller.busy || roller.revealOpen ? '100%' : `${Math.max(0, roller.comboT / COMBO_WINDOW) * 100}%`;
     }
     const rp = $('rushPill');
     rp.hidden = roller.rushT <= 0;
     if (!rp.hidden) {
-      setText($('rushText'), `ROLL RUSH x${stats.rushMult} · ${Math.ceil(roller.rushT)}s`);
+      setText($('rushText'), `ROLL RUSH x${stats.rushMult}${max} · ${Math.ceil(roller.rushT)}s`);
       $('rushBar').style.width = `${(roller.rushT / stats.rushTime) * 100}%`;
     }
   }
@@ -155,10 +160,12 @@ export class Hud {
     const h = $('hint');
     let target = null, text = '', side = 'down';
     const { roller, stats } = this.game;
+    // Roll tips sit above the reel so they never cover the spinning name or the result.
+    const rollTarget = roller.reel.hidden ? $('rollBtn') : roller.reel;
     if (!state.tutorial.rolled) { target = $('rollBtn'); text = 'Roll for heroes!'; }
-    else if (stats.hurry > 0 && !state.tutorial.hurried && roller.busy) { target = $('rollBtn'); text = 'Tap ROLL fast to hurry the spin!'; }
-    else if (stats.comboMax > 0 && !state.tutorial.comboed && !roller.busy && roller.comboT > 0 && !roller.autoOn) { target = $('rollBtn'); text = 'Roll again now to start a combo!'; }
-    else if (roller.die) { text = 'Tap the Speed Die for a Roll Rush!'; }
+    else if (stats.hurry > 0 && !state.tutorial.hurried && roller.busy) { target = rollTarget; text = 'Tap ROLL fast to hurry the spin!'; }
+    else if (stats.comboMax > 0 && !state.tutorial.comboed && !roller.busy && roller.comboT > 0 && !roller.autoOn) { target = rollTarget; text = 'Roll again now to start a combo!'; }
+    else if (roller.die && !state.tutorial.rushed && !roller.covered()) { text = 'Tap the Speed Die for a Roll Rush!'; }
     else if (!state.tutorial.upgraded && affordableCount(state, NODES) > 0) { target = $('upgradesBtn'); text = 'You can afford an upgrade!'; side = 'left'; }
     else if (state.clicks < 3 && battle.phase === 'fighting' && battle.enemies.length && state.wave <= 3) { text = 'Tap enemies to hit them!'; }
     else if (!$('heroBadge').hidden && state.rolls < 60) { target = $('heroesBtn'); text = 'Equip your stronger heroes!'; side = 'left'; }
@@ -166,12 +173,13 @@ export class Hud {
     h.hidden = false;
     setText(h, text);
     h.className = `hint ${target ? side : ''}`;
-    if (!target) { h.style.left = '50%'; h.style.top = '38%'; h.style.transform = 'translateX(-50%)'; return; }
+    // Centring uses the `translate` property so the bobbing animation (on `transform`) can't undo it.
+    if (!target) { h.style.left = '50%'; h.style.top = '38%'; h.style.translate = '-50% 0'; return; }
     const r = target.getBoundingClientRect();
     if (side === 'down') {
-      h.style.left = `${r.left + r.width / 2}px`; h.style.top = `${r.top - 58}px`; h.style.transform = 'translateX(-50%)';
+      h.style.left = `${r.left + r.width / 2}px`; h.style.top = `${r.top - h.offsetHeight - 16}px`; h.style.translate = '-50% 0';
     } else {
-      h.style.left = `${r.right + 18}px`; h.style.top = `${r.top + r.height / 2}px`; h.style.transform = 'translateY(-50%)';
+      h.style.left = `${r.right + 18}px`; h.style.top = `${r.top + r.height / 2}px`; h.style.translate = '0 -50%';
     }
   }
 

@@ -1229,9 +1229,16 @@ export function heroSprite(key, { hidden = false, size = FULL.size } = {}) {
   return url;
 }
 
-const idle = (fn, timeout) => (typeof requestIdleCallback === 'function'
+const hasIdle = typeof requestIdleCallback === 'function';
+// Without requestIdleCallback (Safari) wait a while, then run right after a frame so a render gets most
+// of a frame's budget instead of landing in the middle of one.
+const idle = (fn, timeout) => (hasIdle
   ? requestIdleCallback(fn, { timeout })
-  : setTimeout(fn, Math.min(timeout, 50)));
+  : setTimeout(() => requestAnimationFrame(() => setTimeout(fn, 0)), Math.min(timeout, 180)));
+
+// The game can pause warm-up (e.g. while the reel spins) where idle detection isn't available.
+let paused = () => false;
+export function setWarmPause(fn) { paused = fn; }
 
 // Renders a sprite ahead of time in an idle slot (e.g. the 512 reveal sprite of the best key when the
 // reel starts spinning) and resolves to its URL. Works without requestIdleCallback (Safari).
@@ -1256,12 +1263,17 @@ export function warmSprites() {
   add('n', { hidden: true });
   for (const v of ['g', 'h', 'hg']) add(v, { size: SMALL.size });
   for (const v of ['g', 'h', 'hg']) add(v, {});
+  // A render takes ~10ms (more on slow devices), so wait for a roomy idle slot, but give up waiting
+  // after a second in total (short slots must not keep restarting the wait).
+  let waitStart = performance.now();
   const next = (deadline) => {
-    // A render takes ~10ms (more on slow devices): wait for a roomy idle slot unless the timeout fired.
-    if (deadline && !deadline.didTimeout && deadline.timeRemaining() <= 10) return idle(next, 1000);
+    const left = 1000 - (performance.now() - waitStart);
+    const cramped = deadline && !deadline.didTimeout && deadline.timeRemaining() <= 8 && left > 0;
+    if (cramped || (!hasIdle && paused())) return idle(next, Math.max(50, left));
     const job = jobs.shift();
     if (!job) return;
     heroSprite(...job);
+    waitStart = performance.now();
     idle(next, 1000);
   };
   idle(next, 1000);

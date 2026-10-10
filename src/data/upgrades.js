@@ -36,14 +36,14 @@ const RAW = [
   ['superFastRolls', 'Super Fast Rolls', 'dice', 'roll', 5, 0, 1, 'Rolls take 18% less time.', SPEED],
   ['offline1', 'Offline Rolls I', 'moon', 'roll', 4, 1, 0.15, 'Keep rolling while you are away: 1 roll every 30s.', (s) => { s.offlineInterval = 30; }],
   ['doubleRoll', 'Double Roll', 'dice2', 'roll', 3, 2, 0.4, 'Every roll gives you 2 heroes.', (s) => { s.rollsPerRoll = Math.max(s.rollsPerRoll, 2); }],
-  ['longerRush', 'Longer Rush', 'speeddie', 'roll', 2, 3, 0.4, 'Roll Rush lasts 25s.', (s) => { s.rushTime = Math.max(s.rushTime, 25); }],
+  ['longerRush', 'Longer Rush', 'speeddie', 'roll', 2, 3, 0.4, 'Roll Rush lasts 25s.', (s) => { s.rushTime = Math.max(s.rushTime, 25); }, { req: 'speedDice' }],
   ['comboMaster', 'Combo Master', 'combo', 'roll', 1, 4, 0.5, 'Combos stack up to 25 times and each stack makes rolls 5% faster.', (s) => { s.comboMax = 25; s.comboStep = 0.05; }],
   ['hyperRolls', 'Hyper Rolls', 'dice', 'roll', 6, 0, 1, 'Rolls take 18% less time.', SPEED],
   ['offline2', 'Offline Rolls II', 'moon', 'roll', 5, 1, 0.1, 'Offline: 1 roll every 15s.', (s) => { s.offlineInterval = Math.min(s.offlineInterval || 99, 15); }],
   ['tripleRoll', 'Triple Roll', 'dice2', 'roll', 4, 2, 0.5, 'Every roll gives you 3 heroes.', (s) => { s.rollsPerRoll = Math.max(s.rollsPerRoll, 3); }],
-  ['superRush', 'Super Rush', 'speeddie', 'roll', 3, 3, 0.4, 'Roll Rush makes rolls 3x faster.', (s) => { s.rushMult = 3; }],
+  ['superRush', 'Super Rush', 'speeddie', 'roll', 3, 3, 0.4, 'Roll Rush makes rolls 3x faster.', (s) => { s.rushMult = 3; }, { req: 'speedDice' }],
   ['hurry3', 'Hurry III', 'tap', 'roll', 2, 4, 0.4, 'Each tap skips 14% of a roll, and taps can cut up to 75% of it.', (s) => { s.hurry = 0.14; s.hurryCap = 0.75; }],
-  ['frequentDice', 'Frequent Dice', 'speeddie', 'roll', 1, 5, 0.4, 'Speed Dice show up about twice as often.', (s) => { s.diceEvery = [20, 38]; }],
+  ['frequentDice', 'Frequent Dice', 'speeddie', 'roll', 1, 5, 0.4, 'Speed Dice show up about twice as often.', (s) => { s.diceEvery = [20, 38]; }, { req: 'speedDice' }],
   ['ludicrousRolls', 'Ludicrous Rolls', 'dice', 'roll', 7, 0, 0.5, 'Rolls take 18% less time.', SPEED],
   ['offline3', 'Offline Rolls III', 'moon', 'roll', 6, 1, 0.03, 'Offline: 1 roll every 8s.', (s) => { s.offlineInterval = Math.min(s.offlineInterval || 99, 8); }],
   ['offline4', 'Offline Rolls IV', 'moon', 'roll', 5, 2, 0.05, 'Offline: 1 roll every 4s.', (s) => { s.offlineInterval = Math.min(s.offlineInterval || 99, 4); }],
@@ -150,7 +150,7 @@ for (const [id, name, icon, cat, a, b, cm, desc, fx, opts = {}] of RAW) {
   NODES.push({
     id, name, icon, cat, q, r, ring: a + b, desc, fx,
     cost: Math.round(RING_COST[a + b] * cm),
-    max: opts.max || 1, growth: opts.growth || 2,
+    max: opts.max || 1, growth: opts.growth || 2, req: opts.req,
   });
 }
 
@@ -186,9 +186,12 @@ function nodeState1(node, upgrades) {
   return neighbors(node).some((n) => n.root || (upgrades[n.id] || 0) > 0);
 }
 
+// An upgrade that only modifies another one (e.g. Super Rush needs Speed Dice).
+export const missingReq = (node, upgrades) => (node.req && !(upgrades[node.req] > 0) ? NODE_BY_ID[node.req] : null);
+
 export function canBuy(node, upgrades) {
   const lvl = upgrades[node.id] || 0;
-  if (node.root || lvl >= node.max) return false;
+  if (node.root || lvl >= node.max || missingReq(node, upgrades)) return false;
   const st = nodeState(node, upgrades);
   return st === 'owned' || st === 'available';
 }

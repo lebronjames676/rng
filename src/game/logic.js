@@ -1,7 +1,7 @@
 // Pure game rules: rolling, hero power, equipping, saving. No DOM or three.js here.
 
 import { HEROES, HERO_BY_ID, VARIANTS, stackKey, parseKey, masteryStars } from '../data/heroes.js';
-import { computeStats, NODE_BY_ID, nodeCost, canBuy } from '../data/upgrades.js';
+import { computeStats, NODE_BY_ID, nodeCost, canBuy, neighbors } from '../data/upgrades.js';
 import { goldScale, waveReward } from '../data/enemies.js';
 
 const SAVE_KEY = 'hero-rng-tycoon-save-v1';
@@ -25,7 +25,7 @@ export function newState() {
     bestRoll: 'villager',
     lastSeen: Date.now(),
     settings: { sound: true, autoRoll: false, shadows: true },
-    tutorial: { rolled: false, upgraded: false, hurried: false, comboed: false },
+    tutorial: { rolled: false, upgraded: false, hurried: false, comboed: false, rushed: false },
   };
 }
 
@@ -42,9 +42,26 @@ export function loadState() {
     for (const k of Object.keys(st.upgrades)) if (!NODE_BY_ID[k]) delete st.upgrades[k];
     st.equipped = (st.equipped || []).map((k) => (k && st.inv[k] ? k : null));
     if (!HERO_BY_ID[st.bestRoll]) st.bestRoll = 'villager';
+    refundDisconnected(st);
     return st;
   } catch {
     return null;
+  }
+}
+
+// When the tree layout changes, an owned upgrade can end up cut off from the Town Hall, which would let
+// it reveal nodes far ahead. Those upgrades are refunded at their current price.
+function refundDisconnected(st) {
+  const owned = (n) => n.root || (st.upgrades[n.id] || 0) > 0;
+  const seen = new Set(['root']);
+  const queue = [NODE_BY_ID.root];
+  while (queue.length) {
+    for (const m of neighbors(queue.shift())) if (owned(m) && !seen.has(m.id)) { seen.add(m.id); queue.push(m); }
+  }
+  for (const [id, lvl] of Object.entries(st.upgrades)) {
+    if (seen.has(id)) continue;
+    for (let l = 0; l < lvl; l++) st.gold += nodeCost(NODE_BY_ID[id], l);
+    delete st.upgrades[id];
   }
 }
 
@@ -88,20 +105,26 @@ export function currentLuck(state, stats) {
   return { luck: stats.totalLuck * (streak ? stats.streakMult : 1), streak };
 }
 
-// Performs one roll press and returns the resulting stack keys.
-export function doRoll(state, stats) {
+// Picks the heroes for one roll press without giving them to the player yet, so the reel can
+// spin first. applyRoll() hands them over when the reel lands.
+export function pickRoll(state, stats) {
   const { luck, streak } = currentLuck(state, stats);
   const results = [];
-  for (let i = 0; i < stats.rollsPerRoll; i++) {
-    const id = rollHeroId(luck);
-    const v = rollVariant(stats);
-    const key = stackKey(id, v);
-    addHero(state, key, 1);
-    results.push(key);
-  }
+  for (let i = 0; i < stats.rollsPerRoll; i++) results.push(stackKey(rollHeroId(luck), rollVariant(stats)));
+  return { results, streak, luck };
+}
+
+export function applyRoll(state, roll) {
+  for (const key of roll.results) addHero(state, key, 1);
   state.rolls++;
   state.tutorial.rolled = true;
-  return { results, streak, luck };
+}
+
+// Instant roll (offline progress).
+export function doRoll(state, stats) {
+  const roll = pickRoll(state, stats);
+  applyRoll(state, roll);
+  return roll;
 }
 
 export function addHero(state, key, n) {

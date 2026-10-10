@@ -1,5 +1,5 @@
 // The hex upgrade tree: pan/zoom map of nodes, buy on click (mouse) or second tap (touch).
-import { NODES, NODE_BY_ID, nodeState, nodeCost, CATEGORY } from '../data/upgrades.js';
+import { NODES, NODE_BY_ID, nodeState, nodeCost, missingReq, CATEGORY } from '../data/upgrades.js';
 import { buyNode } from '../game/logic.js';
 import { $, el, iconSpan, setText, escapeHtml } from './dom.js';
 import { icon } from './icons.js';
@@ -141,7 +141,7 @@ export class TreeView {
     const res = buyNode(game.state, node.id);
     const hex = this.els.get(node.id);
     if (!res.ok) {
-      if (res.reason === 'gold') {
+      if (res.reason === 'gold' || missingReq(node, game.state.upgrades)) {
         game.audio.play('deny');
         hex?.classList.remove('shake'); void hex?.offsetWidth; hex?.classList.add('shake');
       }
@@ -159,7 +159,9 @@ export class TreeView {
     if (st === 'hidden') return `<div class="hex"></div><div class="hex-in"><span class="hex-q outline">?</span></div>`;
     const maxed = lvl >= node.max;
     const cost = nodeCost(node, lvl);
-    const badge = node.max > 1 ? `<span class="hex-lvl">${maxed ? 'MAX' : `${lvl}/${node.max}`}</span>` : '';
+    const needs = missingReq(node, this.game.state.upgrades);
+    const badge = needs ? `<span class="hex-lvl">${iconSpan('lock')}</span>`
+      : node.max > 1 ? `<span class="hex-lvl">${maxed ? 'MAX' : `${lvl}/${node.max}`}</span>` : '';
     const price = !node.root && !maxed ? `<span class="hex-price outline">${iconSpan('goldbar')}${fmt(cost)}</span>` : '';
     return `<div class="hex"></div><div class="hex-in">${badge}${iconSpan(node.icon)}<span class="hex-name outline">${escapeHtml(node.name)}</span>${price}</div>`;
   }
@@ -172,7 +174,7 @@ export class TreeView {
       if (st === 'invisible') continue;
       seen.add(node.id);
       const lvl = state.upgrades[node.id] || 0;
-      const sig = `${st}|${lvl}`;
+      const sig = `${st}|${lvl}|${missingReq(node, state.upgrades) ? 'req' : ''}`;
       let hex = this.els.get(node.id);
       if (!hex) {
         hex = el('div', 'hexw');
@@ -200,7 +202,7 @@ export class TreeView {
     for (const [id, hex] of this.els) {
       const node = NODE_BY_ID[id];
       const lvl = state.upgrades[id] || 0;
-      const buyable = !node.root && lvl < node.max && !hex.classList.contains('hidden');
+      const buyable = !node.root && lvl < node.max && !hex.classList.contains('hidden') && !missingReq(node, state.upgrades);
       const afford = buyable && state.gold >= nodeCost(node, lvl);
       hex.classList.toggle('afford', afford);
       hex.classList.toggle('poor', buyable && !afford);
@@ -229,6 +231,8 @@ export class TreeView {
     if (node.root) { buy.disabled = true; buy.innerHTML = 'Home'; return; }
     if (lvl >= node.max) { buy.disabled = true; buy.innerHTML = 'Owned'; return; }
     if (st === 'hidden') { buy.disabled = true; buy.innerHTML = 'Locked'; return; }
+    const needs = missingReq(node, state.upgrades);
+    if (needs) { buy.disabled = true; buy._h = ''; buy.innerHTML = `Needs ${escapeHtml(needs.name)}`; return; }
     const cost = nodeCost(node, lvl);
     buy.disabled = state.gold < cost;
     const html = `${iconSpan('goldbar')}<span>${fmt(cost)}</span>`;

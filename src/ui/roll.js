@@ -1,7 +1,7 @@
 // The roll button, the spinning hero reel and the big reveal for rare heroes.
 // Also the active-play speed boosts: Tap to Hurry, Roll Combo and Speed Dice (Roll Rush).
 import { HEROES, RARITIES, parseKey, displayName, stackKey } from '../data/heroes.js';
-import { doRoll, rollHeroId, autoFill, currentLuck } from '../game/logic.js';
+import { pickRoll, applyRoll, rollHeroId, autoFill, currentLuck } from '../game/logic.js';
 import { heroSprite, preloadSprite } from './sprites.js';
 import { $, el, setText, escapeHtml, rarityStyle } from './dom.js';
 import { fmtOdds, rand } from '../util.js';
@@ -10,11 +10,19 @@ import { icon } from './icons.js';
 const BIG_REVEAL_TIER = 4; // legendary and up get the full-screen reveal
 const REEL_CARDS = 44;
 const WIN_INDEX = 38;
-const COMBO_WINDOW = 1.5;
+export const COMBO_WINDOW = 1.5;
+const MIN_ROLL = 0.25;     // no boost makes a spin shorter than this
+const REVEAL_LOCK = 0.8;   // taps right after a rare reveal opens don't close it
 const easeOutQuart = (k) => 1 - Math.pow(1 - k, 4);
 const rarityColor = (r) => (r.rainbow ? '#ff7bff' : r.color);
 // Rare heroes that can show up right next to the winning card as a near miss.
 const TEASERS = HEROES.filter((h) => h.odds >= 300);
+
+function bigReveal(key) {
+  const { hero, v } = parseKey(key);
+  const tier = RARITIES[hero.rarity].tier;
+  return tier >= BIG_REVEAL_TIER || (v !== 'n' && tier >= 2);
+}
 
 export class Roller {
   constructor(game) {
@@ -23,7 +31,9 @@ export class Roller {
     this.t = 0;
     this.wait = 0;
     this.revealOpen = false;
+    this.revealLock = 0;
     this.fadeTimer = 0;
+    this.hideTimer = 0;
     this.combo = 0;
     this.comboT = 0;
     this.hurried = 0;
@@ -36,17 +46,25 @@ export class Roller {
     this.reel = $('reel');
     this.strip = $('reelStrip');
     this.btn.addEventListener('click', () => { game.audio.unlock(); this.press(); });
+    this.btn.addEventListener('animationend', (e) => {
+      if (e.animationName === 'zap' || e.animationName === 'shake') this.btn.classList.remove('zap', 'nudge');
+    });
     this.auto.addEventListener('click', () => { game.audio.unlock(); this.toggleAuto(); });
-    $('reveal').addEventListener('click', () => this.closeReveal());
+    $('reveal').addEventListener('click', () => { if (this.revealLock <= 0) this.closeReveal(); });
     this.refreshButtons();
   }
 
   get autoOn() { return this.game.stats.autoRoll && this.game.state.settings.autoRoll; }
 
-  // Combo stacks and Roll Rush both shorten the next roll.
+  // Combo stacks and Roll Rush both speed up spins.
   speedMult() {
     const s = this.game.stats;
     return (1 + this.combo * s.comboStep) * (this.rushT > 0 ? s.rushMult : 1);
+  }
+
+  // The boost actually applied, after the MIN_ROLL floor.
+  effectiveMult() {
+    return Math.max(1, Math.min(this.speedMult(), this.game.stats.rollTime / MIN_ROLL));
   }
 
   toggleAuto() {
@@ -79,7 +97,10 @@ export class Roller {
 
   // Roll button / Space: start a roll, or hurry the one that is spinning.
   press() {
-    if (this.revealOpen) { this.closeReveal(); return; }
+    if (this.revealOpen) {
+      if (this.revealLock <= 0) this.closeReveal();
+      return;
+    }
     if (this.busy) { this.hurry(); return; }
     this.start(true);
   }
@@ -95,16 +116,27 @@ export class Roller {
       }
     }
     this.comboT = 0;
-    this.result = doRoll(state, stats);
+    // The heroes are picked now but only handed over when the reel lands, so nothing spoils the spin.
+    this.result = pickRoll(state, stats);
+    this.applied = false;
     this.busy = true;
     this.t = 0;
     this.hurried = 0;
-    this.dur = Math.max(0.25, stats.rollTime / this.speedMult());
+    this.dur = stats.rollTime; // measured in un-boosted seconds; boosts make time run faster
     this.display.classList.remove('fade', 'pop');
     this.reel.hidden = false;
+    this.hideTimer = 0;
     setText($('rdExtra'), '');
     this.buildReel(this.bestKey(this.result.results));
     this.refreshButtons();
+  }
+
+  // Give the spinning roll's heroes to the player right away (before saving on page close).
+  commitPending() {
+    if (this.busy && !this.applied) {
+      applyRoll(this.game.state, this.result);
+      this.applied = true;
+    }
   }
 
   hurry() {
@@ -119,7 +151,7 @@ export class Roller {
     this.t += step * this.dur;
     state.tutorial.hurried = true;
     this.game.audio.play('hurry', Math.round(this.hurried / stats.hurry));
-    this.btn.classList.remove('zap'); void this.btn.offsetWidth; this.btn.classList.add('zap');
+    this.btn.classList.remove('zap', 'nudge'); void this.btn.offsetWidth; this.btn.classList.add('zap');
     this.refreshButtons();
   }
 
@@ -131,7 +163,7 @@ export class Roller {
 
   // Fill the reel with random heroes and put the result where the reel will stop.
   buildReel(winKey) {
-    preloadSprite(winKey, { size: 512 }); // ready for the big reveal if this turns out rare
+    if (bigReveal(winKey)) preloadSprite(winKey, { size: 512 });
     const luck = Math.max(1, this.game.stats.totalLuck * 0.6);
     this.cards = [];
     const frag = document.createDocumentFragment();
@@ -183,9 +215,10 @@ export class Roller {
   reveal() {
     const { game } = this;
     const { state, stats } = game;
+    this.commitPending();
     const keys = this.result.results;
     const best = this.bestKey(keys);
-    const { hero, v } = parseKey(best);
+    const { hero } = parseKey(best);
     const r = RARITIES[hero.rarity];
     this.placeReel(1);
     this.strip.children[WIN_INDEX]?.classList.add('win');
@@ -204,7 +237,7 @@ export class Roller {
     if (autoFill(state, stats, keys)) game.onEquipChanged();
     game.onRolled(keys);
 
-    if (r.tier >= BIG_REVEAL_TIER || (v !== 'n' && r.tier >= 2)) this.openReveal(best);
+    if (bigReveal(best)) this.openReveal(best);
     this.busy = false;
     this.wait = 0.3;
     this.fadeTimer = 2.6;
@@ -228,6 +261,7 @@ export class Roller {
     box.hidden = false;
     $('banner').hidden = true;
     this.revealOpen = true;
+    this.revealLock = REVEAL_LOCK;
     this.revealTimer = this.autoOn ? 2.6 : 6;
   }
 
@@ -237,19 +271,29 @@ export class Roller {
   }
 
   // ---------------- Speed Dice / Roll Rush ----------------
+  // True while something covers the screen, so the die can't be seen or tapped.
+  covered() {
+    return this.revealOpen || !!document.querySelector('.modal:not([hidden])');
+  }
+
   updateDice(dt) {
     const { stats, audio } = this.game;
-    if (this.rushT > 0) {
+    // Rush only drains while rolls can happen (not while a reveal pauses rolling).
+    if (this.rushT > 0 && !this.revealOpen) {
       this.rushT -= dt;
       if (this.rushT <= 0) { this.rushT = 0; audio.play('rushEnd'); }
     }
+    const covered = this.covered();
     if (this.die) {
       const d = this.die;
+      d.el.hidden = covered;
+      if (covered) return;
       d.life -= dt;
       const w = window.innerWidth, h = window.innerHeight;
+      const x0 = w * 0.12, x1 = w * 0.88, y0 = h * 0.22, y1 = h * 0.58;
       d.x += d.vx * dt; d.y += d.vy * dt;
-      if (d.x < w * 0.12 || d.x > w * 0.88) d.vx *= -1;
-      if (d.y < h * 0.22 || d.y > h * 0.58) d.vy *= -1;
+      if (d.x < x0) { d.x = x0; d.vx = Math.abs(d.vx); } else if (d.x > x1) { d.x = x1; d.vx = -Math.abs(d.vx); }
+      if (d.y < y0) { d.y = y0; d.vy = Math.abs(d.vy); } else if (d.y > y1) { d.y = y1; d.vy = -Math.abs(d.vy); }
       d.el.style.left = `${d.x}px`;
       d.el.style.top = `${d.y}px`;
       d.el.classList.toggle('leaving', d.life < 2);
@@ -258,15 +302,17 @@ export class Roller {
     }
     if (!stats.rush || this.rushT > 0) return;
     this.diceT -= dt;
-    const blocked = this.revealOpen || this.game.tree.isOpen || this.game.heroes.isOpen;
-    if (this.diceT <= 0 && !blocked) this.spawnDie();
+    if (this.diceT <= 0 && !covered) this.spawnDie();
   }
 
   spawnDie() {
     const w = window.innerWidth, h = window.innerHeight;
     const btn = el('button', 'speed-die', `<span class="ico">${icon('speeddie')}</span><span class="die-tap outline">TAP!</span>`);
     btn.setAttribute('aria-label', 'Speed Die: tap for Roll Rush');
-    btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.collectDie(); });
+    // Collect on click (not pointerdown) so the rest of the tap can't fall through to whatever is
+    // underneath once the die is gone.
+    btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+    btn.addEventListener('click', (e) => { e.stopPropagation(); this.collectDie(); });
     $('game').appendChild(btn);
     const a = Math.random() * Math.PI * 2;
     this.die = { el: btn, x: rand(w * 0.2, w * 0.8), y: rand(h * 0.26, h * 0.52), vx: Math.cos(a) * 70, vy: Math.sin(a) * 50, life: 9 };
@@ -280,9 +326,10 @@ export class Roller {
   }
 
   collectDie() {
-    const { stats, hud, audio, effects } = this.game;
-    this.game.audio.unlock();
+    const { stats, hud, audio, effects, state } = this.game;
+    audio.unlock();
     this.rushT = stats.rushTime;
+    state.tutorial.rushed = true;
     this.removeDie();
     audio.play('rush');
     effects.burst({ x: 0, y: 5, z: 0 }, ['#ffd23f', '#fff36b', '#ffffff'], 30, { speed: 7, up: 9, size: 0.3 });
@@ -293,7 +340,8 @@ export class Roller {
   update(dt) {
     this.updateDice(dt);
     if (this.busy) {
-      this.t += dt;
+      // Boosts speed up the spin's clock, so a Roll Rush grabbed mid-spin helps right away.
+      this.t += dt * this.effectiveMult();
       const k = this.t / this.dur;
       $('rollFill').style.width = `${Math.min(100, k * 100)}%`;
       this.placeReel(k);
@@ -304,6 +352,7 @@ export class Roller {
       return;
     }
     if (this.revealOpen) {
+      this.revealLock -= dt;
       this.revealTimer -= dt;
       if (this.revealTimer <= 0) this.closeReveal();
       return;
@@ -314,7 +363,12 @@ export class Roller {
     }
     if (this.fadeTimer > 0) {
       this.fadeTimer -= dt;
-      if (this.fadeTimer <= 0 && !this.autoOn) this.display.classList.add('fade');
+      if (this.fadeTimer <= 0 && !this.autoOn) { this.display.classList.add('fade'); this.hideTimer = 0.9; }
+    }
+    // Once faded, take the reel out of the way so it doesn't hide the road behind it.
+    if (this.hideTimer > 0) {
+      this.hideTimer -= dt;
+      if (this.hideTimer <= 0) this.reel.hidden = true;
     }
     if (this.autoOn) {
       this.wait -= dt;
